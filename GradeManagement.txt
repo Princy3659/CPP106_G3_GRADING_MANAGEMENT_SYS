@@ -1,0 +1,226 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import javax.swing.table.DefaultTableModel;
+
+public class GradeManagerApp extends JFrame {
+	private JTextField studentNameField;
+    private JTextField gradeField;
+    private JButton addButton;
+    private JButton calculateButton;
+    private JButton exportButton;
+    private JButton clearAllButton;
+    private JTable gradeTable;
+    private DefaultTableModel tableModel;
+    private JTextArea resultArea;
+
+    private ArrayList<Student> students;
+
+    public GradeManagerApp() {
+        students = new ArrayList<>();
+        setTitle("PNC Grade Management System");
+        setSize(800, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+        setLocationRelativeTo(null);  // Center the window
+
+        // Set custom font for the app to Times New Roman
+        Font font = new Font("Times New Roman", Font.PLAIN, 14);
+       
+        // Create title panel on the left side
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS)); // Vertical alignment
+        titlePanel.setBackground(new Color(144, 238, 144)); // Light green background color
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding
+
+        JLabel titleLabel = new JLabel("Grade Manager");
+        titleLabel.setFont(new Font("Times New Roman", Font.BOLD, 14)); // Slightly larger, bold font for the title
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT); // Center alignment of text within the panel
+
+        titlePanel.add(Box.createVerticalGlue()); // Add spacing before the title
+        titlePanel.add(titleLabel);
+        titlePanel.add(Box.createVerticalGlue()); // Add spacing after the title
+
+        add(titlePanel, BorderLayout.WEST); // Add title panel to the left (WEST) side of the window
+
+        // Create input panel with GridLayout
+        JPanel inputPanel = new JPanel(new GridLayout(2, 4, 10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding around the panel
+        inputPanel.setBackground(new Color(144, 238, 144)); // Light green background color
+
+        studentNameField = new JTextField(15);
+        studentNameField.setFont(font);
+        gradeField = new JTextField(5);
+        gradeField.setFont(font);
+
+        addButton = new JButton("Add Grade");
+        addButton.setFont(font);
+        calculateButton = new JButton("Calculate Average");
+        calculateButton.setFont(font);
+        exportButton = new JButton("Export");
+        exportButton.setFont(font);
+        clearAllButton = new JButton("Clear");
+        clearAllButton.setFont(font);
+
+        inputPanel.add(new JLabel("Student Name:", JLabel.RIGHT));
+        inputPanel.add(studentNameField);
+        inputPanel.add(new JLabel("Grade (Percentage):", JLabel.RIGHT)); // Updated label to indicate percentage input
+        inputPanel.add(gradeField);
+        inputPanel.add(addButton);
+        inputPanel.add(calculateButton);
+        inputPanel.add(exportButton);
+        inputPanel.add(clearAllButton);
+
+        add(inputPanel, BorderLayout.NORTH);
+
+        // Create table for grades
+        tableModel = new DefaultTableModel(new String[]{"Student Name", "Grade (GPE)"}, 0);
+        gradeTable = new JTable(tableModel);
+        gradeTable.setFont(font);
+        gradeTable.setRowHeight(25);
+        gradeTable.getTableHeader().setFont(new Font("Times New Roman", Font.BOLD, 14)); // Bold header font
+
+        add(new JScrollPane(gradeTable), BorderLayout.CENTER);
+
+        // Create result area
+        resultArea = new JTextArea();
+        resultArea.setEditable(false);
+        resultArea.setFont(new Font("Times New Roman", Font.BOLD, 14)); // Bold result text
+        resultArea.setForeground(new Color(25, 111, 61)); // Dark green text color
+        resultArea.setBackground(new Color(245, 245, 245)); // Light gray background color
+        resultArea.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Result"),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        add(new JScrollPane(resultArea), BorderLayout.SOUTH);
+
+        // Button actions
+        addButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                addGrade();
+            }
+        });
+
+        calculateButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                calculateAverage();
+            }
+        });
+
+        exportButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                exportGrades();
+            }
+        });
+
+        clearAllButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                clearAllStudents();
+            }
+        });
+    }
+
+    // Method to convert percentage to the Grade Point Equivalent (GPE)
+    private double convertToGPE(double percentage) {
+        if (percentage >= 96) return 1.00;
+        if (percentage >= 92) return 1.25;
+        if (percentage >= 88) return 1.50;
+        if (percentage >= 84) return 1.75;
+        if (percentage >= 80) return 2.00;
+        if (percentage >= 75) return 2.25;
+        if (percentage >= 70) return 2.50;
+        if (percentage >= 65) return 2.75;
+        if (percentage >= 60) return 3.00;
+        return 5.00; // Fail if below 60
+    }
+
+    // Modified addGrade method with percentage to GPE conversion
+    private void addGrade() {
+        String name = studentNameField.getText();
+        String gradeText = gradeField.getText();
+
+        try {
+            double percentage = Double.parseDouble(gradeText);
+
+            // Ensure the percentage is within the 0 to 100 range
+            if (percentage < 0.0 || percentage > 100.0) {
+                JOptionPane.showMessageDialog(this, "Please enter a grade between 0 and 100.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Convert the percentage to the Grade Point Equivalent (GPE)
+            double gpe = convertToGPE(percentage);
+
+            students.add(new Student(name, gpe));
+            tableModel.addRow(new Object[]{name, String.format("%.2f", gpe)});
+            studentNameField.setText("");
+            gradeField.setText("");
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid percentage grade.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Modified calculateAverage method to display individual student grades
+    private void calculateAverage() {
+        if (students.isEmpty()) {
+            resultArea.setText("No grades available.");
+            return;
+        }
+
+        StringBuilder resultBuilder = new StringBuilder();
+        resultBuilder.append("Individual Student Grades (GPE):\n");
+
+        for (Student student : students) {
+            resultBuilder.append(student.getName())
+                    .append(": ")
+                    .append(String.format("%.2f", student.getGrade()))
+                    .append("\n");
+        }
+
+        resultArea.setText(resultBuilder.toString());
+    }
+
+    private void exportGrades() {
+        // Simple export functionality (e.g., to console)
+        StringBuilder sb = new StringBuilder();
+        sb.append("Student Grades:\n");
+        for (Student student : students) {
+            sb.append(student.getName()).append(": ").append(String.format("%.2f", student.getGrade())).append("\n");
+        }
+        System.out.println(sb.toString());
+        JOptionPane.showMessageDialog(this, "Grades exported to console.", "Export", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void clearAllStudents() {
+        students.clear();
+        tableModel.setRowCount(0);
+        resultArea.setText("All grades have been cleared.");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            GradeManagerApp app = new GradeManagerApp();
+            app.setVisible(true);
+        });
+    }
+
+    private static class Student {
+        private String name;
+        private double grade;
+
+        public Student(String name, double grade) {
+            this.name = name;
+            this.grade = grade;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public double getGrade() {
+            return grade;
+        }
+    }
+}
